@@ -23,7 +23,7 @@
 *                     Global defines - Handles and Function prototypes                      *
 *********************************************************************************************/
 static const char *TAG = "Interfaces_app";
-static const char *LedCtrl_ON = "LED=1";
+static const char *LedCtrl_ON = "LED=0";
 
 bool LED_STATUS = false;
 bool app_ctrl = false;
@@ -48,19 +48,22 @@ void uart_read_app_task(void *pvParameter)
 
     while (true)
     {    
-        memset(data, 0, BUF_SIZE);
-        
-        // Read data from the UART
-        int len = uart_read_bytes(ECHO_UART_PORT_NUM, data, (BUF_SIZE - 1), 20 / portTICK_RATE_MS);
-        // Write data back to the UART
-        //uart_write_bytes(ECHO_UART_PORT_NUM, (const char *) data, len);
-        
-        if (len >=5) {
-            data[len] = '\0';
-            xQueueSend(UART_rx_data_queue, &data, 10);
+        if (xSemaphoreTake(UartSemaphore, portMAX_DELAY))
+        {
+            memset(data, 0, BUF_SIZE);
+            
+            // Read data from the UART
+            int len = uart_read_bytes(ECHO_UART_PORT_NUM, data, (BUF_SIZE - 1), 20 / portTICK_RATE_MS);
+            // Write data back to the UART
+            //uart_write_bytes(ECHO_UART_PORT_NUM, (const char *) data, len);
+            
+            if (len >=5) {
+                data[len] = '\0';
+                xQueueSend(UART_rx_data_queue, &data, 10);
+            }
+            vTaskDelay(1 / portTICK_RATE_MS);
+            xSemaphoreGive(UartSemaphore);
         }
-        vTaskDelay(1 / portTICK_RATE_MS);
-        xSemaphoreGive(UartSemaphore);
     }
 }
 
@@ -111,25 +114,21 @@ void LedCtrlTask(void *pvParameter)
 {
     while (true)
     {    
-        if (xSemaphoreTake(UartSemaphore, portMAX_DELAY))
+        // Configure a temporary buffer for the incoming data
+        uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
+        
+        if (xQueueReceive(UART_rx_data_queue, &data, 10))
         {
-            // Configure a temporary buffer for the incoming data
-            uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
-           
-            if (xQueueReceive(UART_rx_data_queue, &data, 10))
+            if (strcmp(LedCtrl_ON, (const char *) data) == 0)
             {
-                if (strcmp(LedCtrl_ON, (const char *) data) == 0)
-                {
-                    ESP_LOGI(TAG, "*** LedCtrl(ON) ***\n");
-                    gpio_set_level(ESP32_BLINK_GPIO, 1);
-                    LED_STATUS = true;
-                } else {
-                    ESP_LOGI(TAG, "*** LedCtrl(OFF) ***\n");
-                    gpio_set_level(ESP32_BLINK_GPIO, 0);
-                    LED_STATUS = false;
-                }
+                ESP_LOGI(TAG, "*** LedCtrl(ON) ***\n");
+                gpio_set_level(ESP32_BLINK_GPIO, 1);
+                LED_STATUS = true;
+            } else {
+                ESP_LOGI(TAG, "*** LedCtrl(OFF) ***\n");
+                gpio_set_level(ESP32_BLINK_GPIO, 0);
+                LED_STATUS = false;
             }
-            xSemaphoreGive(UartSemaphore);
         }
     }
 }
