@@ -2,7 +2,7 @@
     #define INTERFACES_APP_N
     
     #define ESP32_BLINK_GPIO GPIO_NUM_13
-    #define RED_LED_GPIO GPIO_NUM_21
+    #define RED_LED_GPIO GPIO_NUM_19
     #define TACTILE_SW_GPIO GPIO_NUM_4
 
     // #define GPIO_INPUT_PIN_SEL  (1ULL<<TACTILE_SW_GPIO)

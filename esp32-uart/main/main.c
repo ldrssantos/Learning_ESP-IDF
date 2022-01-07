@@ -100,15 +100,15 @@ void app_main(void)
         ESP_LOGE("ERROR", "*** uart_read_app_task error ***\n");
     }
 
-    // Led status task controlled by serial command event
-    if (xTaskCreate(LedCtrlTask, "LedCtrlTask", configMINIMAL_STACK_SIZE + 2048, NULL, 6, NULL) != pdTRUE)
-    {
-        ESP_LOGE("ERROR", "*** LedCtrlTask error ***\n");
-    }
-
     // Serial(TX) task
     if (xTaskCreate(uart_write_app_task, "uart_write_app_task", ECHO_TASK_STACK_SIZE, NULL, 5, NULL) != pdTRUE)
     {
         ESP_LOGE("ERROR", "*** uart_write_app_task error ***\n");
+    }
+
+    // Led status task controlled by serial command event
+    if (xTaskCreate(LedCtrlTask, "LedCtrlTask", configMINIMAL_STACK_SIZE + 2048, NULL, 6, NULL) != pdTRUE)
+    {
+        ESP_LOGE("ERROR", "*** LedCtrlTask error ***\n");
     }
 }

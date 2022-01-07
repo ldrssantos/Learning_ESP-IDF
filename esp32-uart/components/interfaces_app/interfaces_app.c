@@ -23,7 +23,7 @@
 *                     Global defines - Handles and Function prototypes                      *
 *********************************************************************************************/
 static const char *TAG = "Interfaces_app";
-static const char *LedCtrl_ON = "LED=0";
+static const char *LedCtrl_ON = "LED=1";
 
 bool LED_STATUS = false;
 bool app_ctrl = false;
@@ -85,9 +85,9 @@ void uart_write_app_task(void *pvParameter)
             {
                 if (LED_STATUS)
                 {
-                    strcat(AppStatus, " LED [1] - ");
+                    strcat(AppStatus, "LED [1] - ");
                 } else {
-                    strcat(AppStatus, " LED [0] - ");
+                    strcat(AppStatus, "LED [0] - ");
                 }
                 
                 if (gpio_get_level(TACTILE_SW_GPIO))
@@ -97,7 +97,7 @@ void uart_write_app_task(void *pvParameter)
                     strcat(AppStatus, "BUTTON [0]");
                 }
                 
-                ESP_LOGI(TAG, "%s\n", AppStatus);
+                // ESP_LOGI(TAG, "%s\n", AppStatus);
                 // Write data back to the UART
                 uart_write_bytes(ECHO_UART_PORT_NUM, (const char *) AppStatus, BUF_SIZE);
             }
