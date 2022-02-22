@@ -6,7 +6,7 @@
 
 * Target Devices:   ESP32
 * Tool versions:    ESP-IDF(v4.3.1) 
-* Description:      ESP32 I2C communication according ESP-IDF documentation 
+* Description:      ESP32 I2C communication according to ESP-IDF documentation 
 *                   for MPU6050 sensor 
 *               
 * Dependencies: 

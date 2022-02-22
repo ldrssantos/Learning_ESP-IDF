@@ -19,14 +19,16 @@
 
 #include "interfaces_app.h"
 
+// #include "cJSON.h"
+
 /********************************************************************************************
 *                     Global defines - Handles and Function prototypes                      *
 *********************************************************************************************/
 static const char *TAG = "Interfaces_app";
-static const char *LedCtrl_ON = "LED=1";
+static const char *LedCtrl_ON = "LED=0";
 
-bool LED_STATUS = false;
-bool app_ctrl = false;
+static uint8_t LED_GPIO_CONFIG[INTERFACE_SIZE] = {12, 13, 14};
+static uint8_t TACTOLE_SW_GPIO_CONFIG[INTERFACE_SIZE] = {4, 16, 17};
 
 /********************************************************************************************
 *             FreeRTOS section - Structures, variables and Function prototypes              *
@@ -84,7 +86,10 @@ void uart_write_app_task(void *pvParameter)
             
             if (xQueueReceive(UART_tx_data_queue, &data, 10))
             {
-                if (LED_STATUS)
+                user_adc_read();
+                
+                // if (LED_STATUS)
+                if (gpio_get_level(ESP32_BLINK_GPIO))
                 {
                     strcat(AppStatus, "LED [1] - ");
                 } else {
@@ -124,17 +129,35 @@ void LedCtrlTask(void *pvParameter)
             {
                 ESP_LOGI(TAG, "*** LedCtrl(ON) ***\n");
                 gpio_set_level(ESP32_BLINK_GPIO, 1);
-                LED_STATUS = true;
             } else {
                 ESP_LOGI(TAG, "*** LedCtrl(OFF) ***\n");
                 gpio_set_level(ESP32_BLINK_GPIO, 0);
-                LED_STATUS = false;
             }
         }
     }
 }
 
+/**
+ * UART write data freeRTOS function prototype 
+ */
+void gpio_get_adc_value(void *pvParameter)
+{
+    while (true)
+    {    
+        if (xSemaphoreTake(UartSemaphore, portMAX_DELAY))
+        {
+            char AppStatus[BUF_SIZE] = "ESP32 STATUS: ";
 
+            // Configure a temporary buffer for the incoming data
+            uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
+
+            
+            if (xQueueReceive(UART_tx_data_queue, &data, 10))
+            {
+            }
+        }
+    }
+}
 /********************************************************************************************
 *                         Interface inicialization section                                  *
 *********************************************************************************************/
@@ -161,7 +184,7 @@ uint32_t user_adc_read(void)
     float adc_voltage_read = (adc_raw_read * 0.8) / 1000;  // adaptacao com fator de escala
     // Formata mensagem para ser enviada em buffer
     // printf("\nADC RAW: %04d | ADC VOLT: %04.2f mV \n", adc_raw_read, adc_voltage_read);
-    ESP_LOGI(TAG, "\tADC RAW: %04d | ADC VOLT: %01.4f V", adc_raw_read, adc_voltage_read);
+    ESP_LOGI(TAG, "\tADC RAW: %04d | ADC VOLT: %01.4f V",  adc_raw_read, adc_voltage_read);
     return adc_raw_read;
 };
 
@@ -174,19 +197,20 @@ void USER_GPIO_INIT(void)
     gpio_config_t sw_user_config = {
         .intr_type = GPIO_INTR_DISABLE,
         .mode = GPIO_MODE_INPUT,
-        .pin_bit_mask = (1ull << TACTILE_SW_GPIO),
+        .pin_bit_mask = (1ULL << TACTOLE_SW_GPIO_CONFIG[0]) | (1ULL << TACTOLE_SW_GPIO_CONFIG[1]) | (1ULL << TACTOLE_SW_GPIO_CONFIG[2]),
         .pull_down_en = 0,
         .pull_up_en = 1
     };
     //initilize tactile button 
     gpio_config(&sw_user_config);
 
-    //insert atributes for tactile button 
+    //insert atributes for LEDs (System and status)
     gpio_config_t led_user_config = {
         .intr_type = GPIO_INTR_DISABLE,
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = (1ULL << ESP32_BLINK_GPIO) | (1ULL << RED_LED_GPIO),
-        .pull_down_en = 0
+        .mode = GPIO_MODE_INPUT_OUTPUT,
+        .pin_bit_mask = (1ULL << LED_GPIO_CONFIG[0]) | (1ULL << LED_GPIO_CONFIG[1]) | (1ULL << LED_GPIO_CONFIG[2]) | (1ULL << RED_LED_GPIO),
+        .pull_down_en = 0,
+        .pull_up_en = 1
     };
     //initilize LEDs (System and status)
     gpio_config(&led_user_config);
@@ -228,9 +252,8 @@ static bool IRAM_ATTR timer_group_isr_callback(void *args){
         timer_group_set_alarm_value_in_isr (info->timer_group, info->timer_idx, timer_counter_value);
     }
 
-    app_ctrl = !app_ctrl;
-    gpio_set_level(RED_LED_GPIO, app_ctrl);
-    
+    gpio_set_level(RED_LED_GPIO, (!(gpio_get_level(RED_LED_GPIO))));
+
     xQueueSend(UART_tx_data_queue, "0", NULL);
 
     return high_task_awoken == pdTRUE;

@@ -30,10 +30,11 @@
     #define ECHO_UART_BAUD_RATE     (115200)
     #define ECHO_TASK_STACK_SIZE    (2048)
 
-
     #define UART_DATA_MAX  (5)
 
     #define BUF_SIZE (1024)
+    #define INTERFACE_SIZE (3)
+
 
     // TIMER Structure for our code
     typedef struct{
